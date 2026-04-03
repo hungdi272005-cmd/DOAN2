@@ -1,0 +1,19 @@
+# API Keys
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Models (too large for git)
+*.pkl
+*.h5
+*.keras
+
+# Data (too large for git)
+*.csv
+
+# IDE
+.vscode/
+.idea/

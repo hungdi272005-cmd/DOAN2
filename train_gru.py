@@ -1,18 +1,18 @@
 """
-train_lstm.py - Huấn luyện model LSTM Deep Learning
+train_gru.py - Huấn luyện model GRU Deep Learning
 Hỗ trợ cả dữ liệu mock và dữ liệu thật từ TomTom
 
 Sử dụng:
-  python train_lstm.py              # Dùng mock data (mặc định)
-  python train_lstm.py --realtime   # Dùng dữ liệu thật TomTom
-  python train_lstm.py --combined   # Kết hợp cả mock + thật
+  python train_gru.py              # Dùng mock data (mặc định)
+  python train_gru.py --realtime   # Dùng dữ liệu thật TomTom
+  python train_gru.py --combined   # Kết hợp cả mock + thật
 """
 
 import pandas as pd
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Dense, Dropout
+from tensorflow.keras.layers import GRU, Dense, Dropout
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 from sklearn.preprocessing import StandardScaler
 import joblib
@@ -52,8 +52,8 @@ def load_data(data_source='mock'):
     df['timestamp'] = pd.to_datetime(df['timestamp'])
     return df
 
-def train_lstm_model(df):
-    """Huấn luyện LSTM model."""
+def train_gru_model(df):
+    """Huấn luyện GRU model."""
     print("Loading and preparing data...")
     
     # Build features
@@ -77,36 +77,36 @@ def train_lstm_model(df):
     # Standardize features
     scaler_X = StandardScaler()
     X_scaled = scaler_X.fit_transform(X)
-    joblib.dump(scaler_X, 'scaler_X_lstm.pkl')
+    joblib.dump(scaler_X, 'scaler_X_gru.pkl')
 
     # Reshape input to be 3D [samples, timesteps, features]
-    X_lstm = np.reshape(X_scaled, (X_scaled.shape[0], 1, X_scaled.shape[1]))
+    X_gru = np.reshape(X_scaled, (X_scaled.shape[0], 1, X_scaled.shape[1]))
 
     # Split chronological
-    split_idx = int(len(X_lstm) * 0.8)
-    X_train, X_test = X_lstm[:split_idx], X_lstm[split_idx:]
+    split_idx = int(len(X_gru) * 0.8)
+    X_train, X_test = X_gru[:split_idx], X_gru[split_idx:]
     y_train, y_test = y[:split_idx], y[split_idx:]
 
     print(f"   Train: {X_train.shape}")
     print(f"   Test: {X_test.shape}")
 
-    print("Building LSTM model...")
-    lstm_model = Sequential([
-        LSTM(128, input_shape=(X_train.shape[1], X_train.shape[2]), activation='tanh', return_sequences=True),
+    print("Building GRU model...")
+    gru_model = Sequential([
+        GRU(128, input_shape=(X_train.shape[1], X_train.shape[2]), activation='tanh', return_sequences=True),
         Dropout(0.3),
-        LSTM(64, activation='tanh'),
+        GRU(64, activation='tanh'),
         Dropout(0.2),
         Dense(32, activation='relu'),
         Dense(1)
     ])
 
-    lstm_model.compile(optimizer='adam', loss='mse', metrics=['mae'])
+    gru_model.compile(optimizer='adam', loss='mse', metrics=['mae'])
 
     early_stop = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
     reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=5, min_lr=1e-6)
 
-    print("Training LSTM... (50 epochs, auto-stop khi hoi tu)")
-    lstm_model.fit(
+    print("Training GRU... (50 epochs, auto-stop khi hoi tu)")
+    gru_model.fit(
         X_train, y_train,
         epochs=50,
         batch_size=64,
@@ -115,16 +115,16 @@ def train_lstm_model(df):
     )
 
     print("Evaluating...")
-    loss, mae = lstm_model.evaluate(X_test, y_test)
+    loss, mae = gru_model.evaluate(X_test, y_test)
     print(f"Test RMSE: {np.sqrt(loss):.2f}")
     print(f"Test MAE: {mae:.2f}")
 
-    print("Saving LSTM model...")
-    lstm_model.save('lstm_traffic_model.keras')
-    print("Xong! Model LSTM da duoc huan luyen thanh cong.")
+    print("Saving GRU model...")
+    gru_model.save('gru_traffic_model.keras')
+    print("Xong! Model GRU da duoc huan luyen thanh cong.")
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Train LSTM model')
+    parser = argparse.ArgumentParser(description='Train GRU model')
     parser.add_argument('--realtime', action='store_true', help='Dung du lieu that tu TomTom')
     parser.add_argument('--combined', action='store_true', help='Ket hop mock + that')
     args = parser.parse_args()
@@ -137,9 +137,9 @@ if __name__ == '__main__':
         data_source = 'mock'
 
     print("=" * 60)
-    print("  TRAIN LSTM - DEEP LEARNING")
+    print("  TRAIN GRU - DEEP LEARNING")
     print("=" * 60)
     
     df = load_data(data_source)
     if df is not None:
-        train_lstm_model(df)
+        train_gru_model(df)
