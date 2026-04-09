@@ -7,12 +7,12 @@ __pycache__/
 *.pyo
 
 # Models (too large for git)
-*.pkl
-*.h5
-*.keras
+# *.pkl
+# *.h5
+# *.keras
 
 # Data (too large for git)
-# *.csv
+*.csv
 
 # IDE
 .vscode/
