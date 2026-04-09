@@ -55,7 +55,7 @@ python tomtom_collector.py --schedule
 # Thu thập 24h liên tục
 python tomtom_collector.py --backfill
 
-# Thu thập liên tục mỗi 5 phút
+# Thu thập liên tục mỗi 5 phút`
 python tomtom_collector.py --schedule --interval 5
 
 ```
