@@ -12,7 +12,7 @@ __pycache__/
 # *.keras
 
 # Data (too large for git)
-#.csv
+.csv
 
 # IDE
 .vscode/
