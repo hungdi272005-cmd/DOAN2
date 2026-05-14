@@ -17,8 +17,8 @@ try:
     load_dotenv()
 except:
     pass
-TOMTOM_API_KEY = os.getenv('TOMTOM_API_KEY', '')
-OPENWEATHER_API_KEY = os.getenv('OPENWEATHER_API_KEY', '')
+TOMTOM_API_KEY = os.getenv('TOMTOM_API_KEY', '') or st.secrets.get('TOMTOM_API_KEY', '')
+OPENWEATHER_API_KEY = os.getenv('OPENWEATHER_API_KEY', '') or st.secrets.get('OPENWEATHER_API_KEY', '')
 
 # Cấu hình tuyến đường
 HANOI_ROUTES = {
