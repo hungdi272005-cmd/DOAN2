@@ -143,3 +143,12 @@ if __name__ == '__main__':
     df = load_data(data_source)
     if df is not None:
         train_gru_model(df)
+        
+        # Tự động đánh giá lại các mô hình sau khi huấn luyện xong
+        print("\n" + "="*40)
+        print("📊 Tự động chạy đánh giá độ chính xác (Accuracy, Precision, Recall, F1)...")
+        try:
+            from evaluate_models import evaluate_all_models
+            evaluate_all_models(data_source)
+        except Exception as e:
+            print(f"⚠️ Không thể tự động chạy đánh giá: {e}")

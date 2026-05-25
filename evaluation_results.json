@@ -1,0 +1,221 @@
+{
+  "evaluated_at": "2026-05-23T05:30:41.910234",
+  "data_source": "realtime",
+  "total_test_samples": 5155,
+  "congestion_thresholds": {
+    "thong_thoang": "ratio > 0.8",
+    "un_u": "0.4 < ratio <= 0.8",
+    "tac_nghen": "ratio <= 0.4"
+  },
+  "route_base_speeds": {
+    "Nguyen Trai": 40,
+    "Vanh Dai 3": 60,
+    "Ton Duc Thang": 35
+  },
+  "models": {
+    "Random Forest": {
+      "model_name": "Random Forest",
+      "regression": {
+        "rmse": 2.1068,
+        "mae": 1.4467,
+        "r2": 0.9191
+      },
+      "classification": {
+        "accuracy": 0.9319,
+        "precision_weighted": 0.9304,
+        "recall_weighted": 0.9319,
+        "f1_weighted": 0.9296
+      },
+      "binary_classification": {
+        "accuracy": 0.9404,
+        "precision": 0.9784,
+        "recall": 0.9328,
+        "f1_score": 0.955,
+        "confusion_matrix": [
+          [
+            1587,
+            72
+          ],
+          [
+            235,
+            3261
+          ]
+        ]
+      },
+      "confusion_matrix": [
+        [
+          1587,
+          72,
+          0
+        ],
+        [
+          235,
+          3215,
+          5
+        ],
+        [
+          0,
+          39,
+          2
+        ]
+      ],
+      "per_class_report": {
+        "Thông thoáng": {
+          "precision": 0.871,
+          "recall": 0.9566,
+          "f1-score": 0.9118,
+          "support": 1659
+        },
+        "Ùn ứ / Chậm": {
+          "precision": 0.9666,
+          "recall": 0.9305,
+          "f1-score": 0.9482,
+          "support": 3455
+        },
+        "Tắc nghẽn": {
+          "precision": 0.2857,
+          "recall": 0.0488,
+          "f1-score": 0.0833,
+          "support": 41
+        }
+      },
+      "test_samples": 5155
+    },
+    "LSTM": {
+      "model_name": "LSTM",
+      "regression": {
+        "rmse": 4.1683,
+        "mae": 3.352,
+        "r2": 0.6832
+      },
+      "classification": {
+        "accuracy": 0.8541,
+        "precision_weighted": 0.8519,
+        "recall_weighted": 0.8541,
+        "f1_weighted": 0.8521
+      },
+      "binary_classification": {
+        "accuracy": 0.8621,
+        "precision": 0.919,
+        "recall": 0.8736,
+        "f1_score": 0.8957,
+        "confusion_matrix": [
+          [
+            1390,
+            269
+          ],
+          [
+            442,
+            3054
+          ]
+        ]
+      },
+      "confusion_matrix": [
+        [
+          1390,
+          269,
+          0
+        ],
+        [
+          442,
+          3013,
+          0
+        ],
+        [
+          0,
+          41,
+          0
+        ]
+      ],
+      "per_class_report": {
+        "Thông thoáng": {
+          "precision": 0.7587,
+          "recall": 0.8379,
+          "f1-score": 0.7963,
+          "support": 1659
+        },
+        "Ùn ứ / Chậm": {
+          "precision": 0.9067,
+          "recall": 0.8721,
+          "f1-score": 0.8891,
+          "support": 3455
+        },
+        "Tắc nghẽn": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1-score": 0.0,
+          "support": 41
+        }
+      },
+      "test_samples": 5155
+    },
+    "GRU": {
+      "model_name": "GRU",
+      "regression": {
+        "rmse": 3.6519,
+        "mae": 2.8086,
+        "r2": 0.7568
+      },
+      "classification": {
+        "accuracy": 0.8898,
+        "precision_weighted": 0.8824,
+        "recall_weighted": 0.8898,
+        "f1_weighted": 0.8861
+      },
+      "binary_classification": {
+        "accuracy": 0.8978,
+        "precision": 0.9235,
+        "recall": 0.9259,
+        "f1_score": 0.9247,
+        "confusion_matrix": [
+          [
+            1391,
+            268
+          ],
+          [
+            259,
+            3237
+          ]
+        ]
+      },
+      "confusion_matrix": [
+        [
+          1391,
+          268,
+          0
+        ],
+        [
+          259,
+          3196,
+          0
+        ],
+        [
+          0,
+          41,
+          0
+        ]
+      ],
+      "per_class_report": {
+        "Thông thoáng": {
+          "precision": 0.843,
+          "recall": 0.8385,
+          "f1-score": 0.8407,
+          "support": 1659
+        },
+        "Ùn ứ / Chậm": {
+          "precision": 0.9118,
+          "recall": 0.925,
+          "f1-score": 0.9184,
+          "support": 3455
+        },
+        "Tắc nghẽn": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1-score": 0.0,
+          "support": 41
+        }
+      },
+      "test_samples": 5155
+    }
+  }
+}
