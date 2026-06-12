@@ -133,13 +133,13 @@ Trong đó:
 
 #### A. Bài toán Phân lớp Nhị phân (Có Ùn Tắc vs Không Ùn Tắc)
 Đây là bài toán thực tế phục vụ trực tiếp cho việc đưa ra cảnh báo giao thông nhanh:
-* 🔴 **CÓ ÙN TẮC (Class 1):** Khi **$R \le 80\%$** (Tốc độ giảm từ $20\%$ trở lên so với ngày thường lúc thông thoáng).
-* 🟢 **KHÔNG ÙN TẮC (Class 0):** Khi **$R > 80\%$** (Xe cộ lưu thông bình thường hoặc sát nút tốc độ tự do tối đa).
+* 🔴 **CÓ ÙN TẮC (Class 1):** Khi **$R \le 70\%$** (Tốc độ giảm từ $30\%$ trở lên so với ngày thường lúc thông thoáng).
+* 🟢 **KHÔNG ÙN TẮC (Class 0):** Khi **$R > 70\%$** (Xe cộ lưu thông bình thường hoặc sát nút tốc độ tự do tối đa).
 
 #### B. Bài toán Phân lớp Đa lớp (Chi Tiết Trạng Thái)
 Để phân tích chuyên sâu cho các biểu đồ phân tích và điều tiết luồng, hệ thống chia nhỏ thành 3 trạng thái:
-1. 🟢 **THÔNG THOÁNG:** Khi **$R > 80\%$** (Không có hiện tượng cản trở, xe đi đúng tốc độ cho phép).
-2. 🟡 **ÙN Ứ / CHẬM:** Khi **$40\% < R \le 80\%$** (Mật độ xe đông, tốc độ di chuyển chậm, bắt đầu có hiện tượng dồn ứ).
+1. 🟢 **THÔNG THOÁNG:** Khi **$R > 70\%$** (Không có hiện tượng cản trở, xe đi đúng tốc độ cho phép).
+2. 🟡 **ÙN Ứ / CHẬM:** Khi **$40\% < R \le 70\%$** (Mật độ xe đông, tốc độ di chuyển chậm, bắt đầu có hiện tượng dồn ứ).
 3. 🔴 **TẮC NGHẼN NẶNG:** Khi **$R \le 40\%$** (Xe cộ ùn tắc nghiêm trọng, tốc độ di chuyển rất thấp, trễ giờ nghiêm trọng).
 
 ---

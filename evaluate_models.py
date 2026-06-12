@@ -51,12 +51,12 @@ CONGESTION_LABELS = {
 def speed_to_congestion_class(speed, base_speed):
     """
     Phân lớp trạng thái tắc nghẽn dựa trên tỷ lệ tốc độ / tốc độ chuẩn.
-      - 0: Thông thoáng  (ratio > 0.8)
-      - 1: Ùn ứ / Chậm   (0.4 < ratio <= 0.8)
+      - 0: Thông thoáng  (ratio > 0.7)
+      - 1: Ùn ứ / Chậm   (0.4 < ratio <= 0.7)
       - 2: Tắc nghẽn      (ratio <= 0.4)
     """
     ratio = speed / base_speed if base_speed > 0 else 1
-    if ratio > 0.8:
+    if ratio > 0.7:
         return 0
     elif ratio > 0.4:
         return 1
@@ -64,38 +64,16 @@ def speed_to_congestion_class(speed, base_speed):
         return 2
 
 
-def load_data(data_source='mock'):
-    """Load dữ liệu theo nguồn."""
-    if data_source == 'realtime':
-        filepath = 'hanoi_traffic_realtime.csv'
-        if not os.path.exists(filepath):
-            print("[Error] Chua co file du lieu that. Chay 'python tomtom_collector.py' truoc!")
-            return None
-        print(f"[Info] Dang dung du lieu THAT tu TomTom: {filepath}")
-        df = pd.read_csv(filepath)
-    elif data_source == 'combined':
-        dfs = []
-        if os.path.exists('trafficstats_hanoi_mock.csv'):
-            df_mock = pd.read_csv('trafficstats_hanoi_mock.csv')
-            df_mock['data_source'] = 'mock'
-            dfs.append(df_mock)
-            print(f"   Mock data: {len(df_mock)} records")
-        if os.path.exists('hanoi_traffic_realtime.csv'):
-            df_real = pd.read_csv('hanoi_traffic_realtime.csv')
-            dfs.append(df_real)
-            print(f"   Real data: {len(df_real)} records")
-        if not dfs:
-            print("[Error] Khong tim thay file du lieu nao!")
-            return None
-        df = pd.concat(dfs, ignore_index=True)
-        print(f"[Info] Ket hop: Tong {len(df)} records")
-    else:
-        filepath = 'trafficstats_hanoi_mock.csv'
-        print(f"[Info] Dang dung du lieu MOCK: {filepath}")
-        df = pd.read_csv(filepath)
-
-    df['timestamp'] = pd.to_datetime(df['timestamp'])
-    return df
+def load_data(data_source='realtime'):
+    """Load dữ liệu theo nguồn và gộp dữ liệu TomTom Traffic Index."""
+    from data_utils import load_and_merge_data
+    try:
+        # Tự động gộp dữ liệu
+        df = load_and_merge_data(data_source)
+        return df
+    except Exception as e:
+        print(f"[Error] Lỗi tải dữ liệu: {e}")
+        return None
 
 
 def prepare_features(df):
@@ -172,10 +150,10 @@ def evaluate_single_model(model_name, y_true, y_pred, base_speeds):
             }
 
     # --- Phân lớp nhị phân (Có ùn tắc / Không ùn tắc) ---
-    # Có ùn tắc = 1 (tỷ lệ tốc độ / tốc độ chuẩn <= 0.8)
-    # Không ùn tắc = 0 (tỷ lệ tốc độ / tốc độ chuẩn > 0.8)
-    y_true_bin = np.array([1 if s / b <= 0.8 else 0 for s, b in zip(y_true, base_speeds)])
-    y_pred_bin = np.array([1 if s / b <= 0.8 else 0 for s, b in zip(y_pred, base_speeds)])
+    # Có ùn tắc = 1 (tỷ lệ tốc độ / tốc độ chuẩn <= 0.7)
+    # Không ùn tắc = 0 (tỷ lệ tốc độ / tốc độ chuẩn > 0.7)
+    y_true_bin = np.array([1 if s / b <= 0.7 else 0 for s, b in zip(y_true, base_speeds)])
+    y_pred_bin = np.array([1 if s / b <= 0.7 else 0 for s, b in zip(y_pred, base_speeds)])
 
     bin_accuracy = float(accuracy_score(y_true_bin, y_pred_bin))
     bin_precision = float(precision_score(y_true_bin, y_pred_bin, average='binary', pos_label=1, zero_division=0))
@@ -223,7 +201,10 @@ def evaluate_all_models(data_source='mock'):
 
     df = prepare_features(df)
 
-    features = ['route_encoded', 'weather_encoded', 'is_weekend', 'hour', 'day_of_week', 'month']
+    features = [
+        'route_encoded', 'weather_encoded', 'is_weekend', 'hour', 'day_of_week', 'month',
+        'TrafficIndexLive', 'JamsCount', 'JamsLengthInKms', 'JamsDelay'
+    ]
     X = df[features].values
     y = df['speed_kmh'].values
     base_speeds = get_base_speed_for_rows(df)
@@ -336,8 +317,8 @@ def evaluate_all_models(data_source='mock'):
             'data_source': data_source,
             'total_test_samples': int(len(y_test)),
             'congestion_thresholds': {
-                'thong_thoang': 'ratio > 0.8',
-                'un_u': '0.4 < ratio <= 0.8',
+                'thong_thoang': 'ratio > 0.7',
+                'un_u': '0.4 < ratio <= 0.7',
                 'tac_nghen': 'ratio <= 0.4',
             },
             'route_base_speeds': ROUTE_BASE_SPEED,

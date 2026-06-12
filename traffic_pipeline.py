@@ -18,39 +18,16 @@ import joblib
 import argparse
 import os
 
-def load_data(data_source='mock'):
-    """Load dữ liệu theo nguồn."""
-    if data_source == 'realtime':
-        filepath = 'hanoi_traffic_realtime.csv'
-        if not os.path.exists(filepath):
-            print("❌ Chưa có file dữ liệu thật. Chạy 'python tomtom_collector.py' trước!")
-            return None
-        print(f"📡 Đang dùng dữ liệu THẬT từ TomTom: {filepath}")
-        df = pd.read_csv(filepath)
-    elif data_source == 'combined':
-        # Kết hợp cả mock + thật
-        dfs = []
-        if os.path.exists('trafficstats_hanoi_mock.csv'):
-            df_mock = pd.read_csv('trafficstats_hanoi_mock.csv')
-            df_mock['data_source'] = 'mock'
-            dfs.append(df_mock)
-            print(f"   Mock data: {len(df_mock)} records")
-        if os.path.exists('hanoi_traffic_realtime.csv'):
-            df_real = pd.read_csv('hanoi_traffic_realtime.csv')
-            dfs.append(df_real)
-            print(f"   Real data: {len(df_real)} records")
-        if not dfs:
-            print("❌ Không tìm thấy file dữ liệu nào!")
-            return None
-        df = pd.concat(dfs, ignore_index=True)
-        print(f"📊 Kết hợp: Tổng {len(df)} records")
-    else:  # mock
-        filepath = 'trafficstats_hanoi_mock.csv'
-        print(f"🎭 Đang dùng dữ liệu MOCK: {filepath}")
-        df = pd.read_csv(filepath)
-    
-    df['timestamp'] = pd.to_datetime(df['timestamp'])
-    return df
+def load_data(data_source='realtime'):
+    """Load dữ liệu theo nguồn và gộp dữ liệu TomTom Traffic Index."""
+    from data_utils import load_and_merge_data
+    try:
+        # Tự động gộp dữ liệu
+        df = load_and_merge_data(data_source)
+        return df
+    except Exception as e:
+        print(f"❌ Lỗi tải dữ liệu: {e}")
+        return None
 
 def train_random_forest(df):
     """Huấn luyện model Random Forest."""
@@ -76,7 +53,10 @@ def train_random_forest(df):
     print(f"   Weather: {list(le_weather.classes_)}")
 
     # Define features and target
-    features = ['route_encoded', 'weather_encoded', 'is_weekend', 'hour', 'day_of_week', 'month']
+    features = [
+        'route_encoded', 'weather_encoded', 'is_weekend', 'hour', 'day_of_week', 'month',
+        'TrafficIndexLive', 'JamsCount', 'JamsLengthInKms', 'JamsDelay'
+    ]
     target = 'speed_kmh'
 
     X = df[features]
@@ -120,12 +100,10 @@ if __name__ == '__main__':
     parser.add_argument('--combined', action='store_true', help='Ket hop mock + that')
     args = parser.parse_args()
 
-    if args.realtime:
+    if args.realtime or (not args.combined):
         data_source = 'realtime'
-    elif args.combined:
-        data_source = 'combined'
     else:
-        data_source = 'mock'
+        data_source = 'combined'
 
     print("=" * 60)
     print("  TRAFFIC PIPELINE - RANDOM FOREST")
