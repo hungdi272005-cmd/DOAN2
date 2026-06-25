@@ -1,7 +1,7 @@
 {
-  "evaluated_at": "2026-06-12T16:16:18.264531",
+  "evaluated_at": "2026-06-25T20:34:03.428892",
   "data_source": "realtime",
-  "total_test_samples": 9763,
+  "total_test_samples": 11623,
   "congestion_thresholds": {
     "thong_thoang": "ratio > 0.7",
     "un_u": "0.4 < ratio <= 0.7",
@@ -16,206 +16,206 @@
     "Random Forest": {
       "model_name": "Random Forest",
       "regression": {
-        "rmse": 2.0505,
-        "mae": 1.4091,
-        "r2": 0.9233
+        "rmse": 2.2122,
+        "mae": 1.5364,
+        "r2": 0.9056
       },
       "classification": {
-        "accuracy": 0.8549,
-        "precision_weighted": 0.8556,
-        "recall_weighted": 0.8549,
-        "f1_weighted": 0.853
+        "accuracy": 0.8421,
+        "precision_weighted": 0.8491,
+        "recall_weighted": 0.8421,
+        "f1_weighted": 0.842
       },
       "binary_classification": {
-        "accuracy": 0.86,
-        "precision": 0.8351,
-        "recall": 0.8957,
-        "f1_score": 0.8643,
+        "accuracy": 0.8437,
+        "precision": 0.7968,
+        "recall": 0.9047,
+        "f1_score": 0.8473,
         "confusion_matrix": [
           [
-            4041,
-            860
+            4764,
+            1286
           ],
           [
-            507,
-            4355
+            531,
+            5042
           ]
         ]
       },
       "confusion_matrix": [
         [
-          4041,
-          860,
+          4764,
+          1286,
           0
         ],
         [
-          507,
-          4303,
-          2
+          531,
+          5020,
+          11
         ],
         [
           0,
-          48,
-          2
+          7,
+          4
         ]
       ],
       "per_class_report": {
         "Thông thoáng": {
-          "precision": 0.8885,
-          "recall": 0.8245,
-          "f1-score": 0.8553,
-          "support": 4901
+          "precision": 0.8997,
+          "recall": 0.7874,
+          "f1-score": 0.8398,
+          "support": 6050
         },
         "Ùn ứ / Chậm": {
-          "precision": 0.8258,
-          "recall": 0.8942,
-          "f1-score": 0.8586,
-          "support": 4812
+          "precision": 0.7952,
+          "recall": 0.9026,
+          "f1-score": 0.8455,
+          "support": 5562
         },
         "Tắc nghẽn": {
-          "precision": 0.5,
-          "recall": 0.04,
-          "f1-score": 0.0741,
-          "support": 50
+          "precision": 0.2667,
+          "recall": 0.3636,
+          "f1-score": 0.3077,
+          "support": 11
         }
       },
-      "test_samples": 9763
+      "test_samples": 11623
     },
     "LSTM": {
       "model_name": "LSTM",
       "regression": {
-        "rmse": 2.0578,
-        "mae": 1.4495,
-        "r2": 0.9227
+        "rmse": 2.2531,
+        "mae": 1.6533,
+        "r2": 0.902
       },
       "classification": {
-        "accuracy": 0.8439,
-        "precision_weighted": 0.8414,
-        "recall_weighted": 0.8439,
-        "f1_weighted": 0.8417
+        "accuracy": 0.8309,
+        "precision_weighted": 0.8351,
+        "recall_weighted": 0.8309,
+        "f1_weighted": 0.8304
       },
       "binary_classification": {
-        "accuracy": 0.849,
-        "precision": 0.8279,
-        "recall": 0.8797,
-        "f1_score": 0.853,
+        "accuracy": 0.8319,
+        "precision": 0.7912,
+        "recall": 0.8821,
+        "f1_score": 0.8342,
         "confusion_matrix": [
           [
-            4012,
-            889
+            4753,
+            1297
           ],
           [
-            585,
-            4277
+            657,
+            4916
           ]
         ]
       },
       "confusion_matrix": [
         [
-          4012,
-          889,
+          4753,
+          1297,
           0
         ],
         [
-          585,
-          4227,
+          657,
+          4905,
           0
         ],
         [
           0,
-          50,
+          11,
           0
         ]
       ],
       "per_class_report": {
         "Thông thoáng": {
-          "precision": 0.8727,
-          "recall": 0.8186,
-          "f1-score": 0.8448,
-          "support": 4901
+          "precision": 0.8786,
+          "recall": 0.7856,
+          "f1-score": 0.8295,
+          "support": 6050
         },
         "Ùn ứ / Chậm": {
-          "precision": 0.8182,
-          "recall": 0.8784,
-          "f1-score": 0.8473,
-          "support": 4812
+          "precision": 0.7895,
+          "recall": 0.8819,
+          "f1-score": 0.8331,
+          "support": 5562
         },
         "Tắc nghẽn": {
           "precision": 0.0,
           "recall": 0.0,
           "f1-score": 0.0,
-          "support": 50
+          "support": 11
         }
       },
-      "test_samples": 9763
+      "test_samples": 11623
     },
     "GRU": {
       "model_name": "GRU",
       "regression": {
-        "rmse": 2.0596,
-        "mae": 1.4225,
-        "r2": 0.9226
+        "rmse": 2.2749,
+        "mae": 1.6763,
+        "r2": 0.9001
       },
       "classification": {
-        "accuracy": 0.8443,
-        "precision_weighted": 0.8414,
-        "recall_weighted": 0.8443,
-        "f1_weighted": 0.8421
+        "accuracy": 0.8321,
+        "precision_weighted": 0.837,
+        "recall_weighted": 0.8321,
+        "f1_weighted": 0.8315
       },
       "binary_classification": {
-        "accuracy": 0.8494,
-        "precision": 0.8309,
-        "recall": 0.876,
-        "f1_score": 0.8528,
+        "accuracy": 0.833,
+        "precision": 0.7898,
+        "recall": 0.888,
+        "f1_score": 0.8361,
         "confusion_matrix": [
           [
-            4034,
-            867
+            4733,
+            1317
           ],
           [
-            603,
-            4259
+            624,
+            4949
           ]
         ]
       },
       "confusion_matrix": [
         [
-          4034,
-          867,
+          4733,
+          1317,
           0
         ],
         [
-          603,
-          4209,
+          624,
+          4938,
           0
         ],
         [
           0,
-          50,
+          11,
           0
         ]
       ],
       "per_class_report": {
         "Thông thoáng": {
-          "precision": 0.87,
-          "recall": 0.8231,
-          "f1-score": 0.8459,
-          "support": 4901
+          "precision": 0.8835,
+          "recall": 0.7823,
+          "f1-score": 0.8298,
+          "support": 6050
         },
         "Ùn ứ / Chậm": {
-          "precision": 0.8211,
-          "recall": 0.8747,
-          "f1-score": 0.8471,
-          "support": 4812
+          "precision": 0.7881,
+          "recall": 0.8878,
+          "f1-score": 0.835,
+          "support": 5562
         },
         "Tắc nghẽn": {
           "precision": 0.0,
           "recall": 0.0,
           "f1-score": 0.0,
-          "support": 50
+          "support": 11
         }
       },
-      "test_samples": 9763
+      "test_samples": 11623
     }
   }
 }
