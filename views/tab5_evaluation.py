@@ -102,6 +102,117 @@ def render_tab5(selected_model_type, selected_date, selected_weather, le_route, 
             )
             st.plotly_chart(fig_reg, use_container_width=True)
             
+            # --- Biểu đồ Đường Cong Học Tập (Learning Curves) ---
+            st.write("---")
+            st.markdown("### 📉 Đường Cong Học Tập (Learning Curves) - LSTM & GRU")
+            st.markdown("> **Ý nghĩa:** Biểu đồ này cho thấy quá trình huấn luyện của mô hình Deep Learning qua từng Epoch.\n"
+                        "> - Nếu đường **Train** và **Validation** bám sát nhau và cùng hội tụ → Mô hình học tốt, **không bị Overfitting**.\n"
+                        "> - Nếu đường **Train** giảm mạnh nhưng **Validation** tăng ngược → Mô hình **bị Overfitting** (học vẹt).\n"
+                        "> - Nếu cả hai đường đều cao và không cải thiện → Mô hình **bị Underfitting** (chưa học được gì).")
+            
+            history_files = {
+                'LSTM': 'lstm_training_history.json',
+                'GRU': 'gru_training_history.json',
+            }
+            
+            has_any_history = False
+            for hist_model_name, hist_file in history_files.items():
+                if os.path.exists(hist_file):
+                    has_any_history = True
+                    with open(hist_file, 'r', encoding='utf-8') as f:
+                        hist_data = json.load(f)
+                    
+                    epochs = hist_data.get('epochs', list(range(1, len(hist_data.get('loss', [])) + 1)))
+                    
+                    col_loss, col_mae = st.columns(2)
+                    
+                    with col_loss:
+                        fig_loss = go.Figure()
+                        fig_loss.add_trace(go.Scatter(
+                            x=epochs, y=hist_data.get('loss', []),
+                            mode='lines+markers', name='Train Loss',
+                            line=dict(color='#3B82F6', width=2),
+                            marker=dict(size=4)
+                        ))
+                        fig_loss.add_trace(go.Scatter(
+                            x=epochs, y=hist_data.get('val_loss', []),
+                            mode='lines+markers', name='Validation Loss',
+                            line=dict(color='#EF4444', width=2, dash='dash'),
+                            marker=dict(size=4)
+                        ))
+                        fig_loss.update_layout(
+                            title=f'📉 {hist_model_name} - Loss (MSE) qua các Epoch',
+                            xaxis_title='Epoch',
+                            yaxis_title='Loss (MSE)',
+                            template='plotly_white',
+                            height=380,
+                            legend=dict(x=0.65, y=0.95),
+                            hovermode='x unified'
+                        )
+                        st.plotly_chart(fig_loss, use_container_width=True)
+                    
+                    with col_mae:
+                        fig_mae = go.Figure()
+                        fig_mae.add_trace(go.Scatter(
+                            x=epochs, y=hist_data.get('mae', []),
+                            mode='lines+markers', name='Train MAE',
+                            line=dict(color='#10B981', width=2),
+                            marker=dict(size=4)
+                        ))
+                        fig_mae.add_trace(go.Scatter(
+                            x=epochs, y=hist_data.get('val_mae', []),
+                            mode='lines+markers', name='Validation MAE',
+                            line=dict(color='#F59E0B', width=2, dash='dash'),
+                            marker=dict(size=4)
+                        ))
+                        fig_mae.update_layout(
+                            title=f'📊 {hist_model_name} - MAE (Sai số tuyệt đối) qua các Epoch',
+                            xaxis_title='Epoch',
+                            yaxis_title='MAE (km/h)',
+                            template='plotly_white',
+                            height=380,
+                            legend=dict(x=0.65, y=0.95),
+                            hovermode='x unified'
+                        )
+                        st.plotly_chart(fig_mae, use_container_width=True)
+                    
+                    # Nhận xét tự động
+                    train_loss = hist_data.get('loss', [])
+                    val_loss = hist_data.get('val_loss', [])
+                    total_epochs = len(epochs)
+                    
+                    if train_loss and val_loss:
+                        final_train = train_loss[-1]
+                        final_val = val_loss[-1]
+                        gap = abs(final_val - final_train)
+                        gap_pct = (gap / final_train * 100) if final_train > 0 else 0
+                        
+                        # Kiểm tra overfitting: val_loss ở nửa sau có tăng không
+                        half = len(val_loss) // 2
+                        val_second_half = val_loss[half:]
+                        is_increasing = len(val_second_half) > 1 and val_second_half[-1] > val_second_half[0] * 1.1
+                        
+                        if is_increasing:
+                            st.warning(f"""
+                            ⚠️ **Nhận xét {hist_model_name}:** Có dấu hiệu **Overfitting nhẹ** - Validation Loss có xu hướng tăng ở nửa sau quá trình huấn luyện.
+                            Đề xuất: Tăng Dropout, giảm số neuron, hoặc thu thập thêm dữ liệu.
+                            """)
+                        elif gap_pct < 15:
+                            st.success(f"""
+                            ✅ **Nhận xét {hist_model_name}:** Mô hình **hội tụ tốt** sau {total_epochs} epoch. 
+                            Train Loss = {final_train:.4f} | Validation Loss = {final_val:.4f} (chênh lệch {gap_pct:.1f}%).
+                            Đường Train và Validation bám sát nhau → **Không bị Overfitting**, mô hình đáng tin cậy cho ứng dụng thực tế.
+                            """)
+                        else:
+                            st.info(f"""
+                            ℹ️ **Nhận xét {hist_model_name}:** Huấn luyện {total_epochs} epoch.
+                            Train Loss = {final_train:.4f} | Validation Loss = {final_val:.4f} (chênh lệch {gap_pct:.1f}%).
+                            Cần theo dõi thêm nếu tiếp tục huấn luyện.
+                            """)
+            
+            if not has_any_history:
+                st.info("💡 Chưa có dữ liệu lịch sử huấn luyện. Hãy **huấn luyện lại** mô hình LSTM hoặc GRU (`python train_lstm.py --realtime` hoặc `python train_gru.py --realtime`) để tạo biểu đồ đường cong học tập.")
+            
             # --- 1b. Đánh Giá Bài Toán Phân Lớp Nhị Phân (Có / Không Ùn Tắc) ---
             st.write("---")
             st.markdown("### 🎯 Đánh Giá Bài Toán Phân Lớp Nhị Phân (Có / Không Ùn Tắc)")

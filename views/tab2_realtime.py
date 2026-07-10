@@ -4,22 +4,43 @@ from datetime import datetime
 
 def render_tab2(TOMTOM_API_KEY, HANOI_ROUTES, fetch_tomtom_flow, fetch_weather):
     st.subheader("🔴 Dữ Liệu Giao Thông Real-time")
-    
+
     if not TOMTOM_API_KEY:
         st.error("⚠️ Chưa cấu hình TOMTOM_API_KEY trong file .env")
-    else:
+        return
+
+    # ─────────────────────────────────────────────────────────────
+    # @st.fragment: khi nhấn "Cập Nhật" chỉ re-run phần này,
+    # không re-run toàn bộ app.py
+    # ─────────────────────────────────────────────────────────────
+    @st.fragment
+    def _realtime_panel():
         st.markdown("<span class='live-dot'>●</span> <b>LIVE</b> - Dữ liệu trực tiếp từ TomTom Traffic API", unsafe_allow_html=True)
-        
+
         if st.button("🔄 Cập Nhật Dữ Liệu", key="refresh_realtime"):
-            st.cache_data.clear()
-        
-        # Lấy dữ liệu real-time cho tất cả tuyến
+            # Xóa cache API để lấy dữ liệu mới
+            fetch_tomtom_flow.clear()
+            fetch_weather.clear()
+            st.rerun(scope="fragment")
+
+        # Lấy dữ liệu flow song song (Concurrent Fetching)
+        from concurrent.futures import ThreadPoolExecutor
+
+        routes_list = list(HANOI_ROUTES.items())
+
+        def get_flow_wrapper(item):
+            name, info = item
+            return name, fetch_tomtom_flow(info['lat'], info['lon'])
+
+        with ThreadPoolExecutor(max_workers=len(HANOI_ROUTES)) as executor:
+            flow_results = dict(executor.map(get_flow_wrapper, routes_list))
+
+        # Hiển thị Metric Cards
         cols = st.columns(len(HANOI_ROUTES))
-        
         for idx, (route_name, route_info) in enumerate(HANOI_ROUTES.items()):
             with cols[idx]:
-                flow = fetch_tomtom_flow(route_info['lat'], route_info['lon'])
-                
+                flow = flow_results.get(route_name)
+
                 if flow:
                     ratio = flow['current_speed'] / flow['free_flow_speed'] if flow['free_flow_speed'] > 0 else 1
                     if ratio > 0.7:
@@ -31,7 +52,7 @@ def render_tab2(TOMTOM_API_KEY, HANOI_ROUTES, fetch_tomtom_flow, fetch_weather):
                     else:
                         status_rt = "🔴 Tắc nghẽn"
                         color_rt = "#EF4444"
-                    
+
                     st.markdown(f"""
                     <div class='metric-box' style='background-color: #1E293B; border-left: 4px solid {color_rt}; color: #F8FAFC; padding: 15px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.3);'>
                         <h4 style='margin: 0; color: #94A3B8; font-weight: 500;'>{route_info['desc']}</h4>
@@ -46,15 +67,15 @@ def render_tab2(TOMTOM_API_KEY, HANOI_ROUTES, fetch_tomtom_flow, fetch_weather):
                     """, unsafe_allow_html=True)
                 else:
                     st.warning(f"Không lấy được dữ liệu cho {route_name}")
-        
+
         # Gauge charts
         st.write("---")
         st.subheader("📊 Mức Tải Giao Thông")
-        
+
         gauge_cols = st.columns(len(HANOI_ROUTES))
         for idx, (route_name, route_info) in enumerate(HANOI_ROUTES.items()):
             with gauge_cols[idx]:
-                flow = fetch_tomtom_flow(route_info['lat'], route_info['lon'])
+                flow = flow_results.get(route_name)
                 if flow:
                     fig_gauge = go.Figure(go.Indicator(
                         mode="gauge+number+delta",
@@ -91,5 +112,7 @@ def render_tab2(TOMTOM_API_KEY, HANOI_ROUTES, fetch_tomtom_flow, fetch_weather):
                 st.metric("Độ ẩm", f"{weather['humidity']}%")
             with w_col3:
                 st.metric("Mô tả", weather['desc'].capitalize())
-        
+
         st.caption(f"⏰ Cập nhật lúc: {datetime.now().strftime('%H:%M:%S %d/%m/%Y')}")
+
+    _realtime_panel()

@@ -247,7 +247,136 @@ def predict_speed(h):
     else:
         return rf_model.predict(features)[0]
 
+def predict_speed_for_route(route_name, h):
+    """Dự báo tốc độ cho bất kỳ tuyến đường nào theo giờ."""
+    r_encoded = le_route.transform([route_name])[0]
+    ti, jc, jl, jd, is_actual = get_tomtom_features(selected_date, h)
+    features = np.array([[
+        r_encoded, weather_encoded, weekend_encoded, h, pred_dayofweek, pred_month,
+        ti, jc, jl, jd
+    ]])
+    if is_using_lstm and lstm_model is not None:
+        feat_scaled = lstm_scaler.transform(features)
+        feat_3d = np.reshape(feat_scaled, (1, 1, 10))
+        return float(lstm_model.predict(feat_3d, verbose=0)[0][0])
+    elif is_using_gru and gru_model is not None:
+        feat_scaled = gru_scaler.transform(features)
+        feat_3d = np.reshape(feat_scaled, (1, 1, 10))
+        return float(gru_model.predict(feat_3d, verbose=0)[0][0])
+    else:
+        return float(rf_model.predict(features)[0])
+
+# --- CACHED BATCH PREDICTIONS (tránh tính lại khi user chỉ đổi tab) ---
+@st.cache_data(show_spinner=False)
+def cached_predict_24h(_rf_model, _lstm_model, _gru_model, _lstm_scaler, _gru_scaler,
+                       route_enc, weather_enc, weekend_enc, dayofweek, month,
+                       model_type, date_str):
+    """Cache dự báo 24h cho 1 tuyến đường theo bộ tham số.
+    date_str dùng làm cache key (không dùng date object trực tiếp)."""
+    results = []
+    for h in range(24):
+        try:
+            ti, jc, jl, jd, _ = get_tomtom_features(
+                pd.Timestamp(date_str).date(), h
+            )
+            features = np.array([[
+                route_enc, weather_enc, weekend_enc, h, dayofweek, month,
+                ti, jc, jl, jd
+            ]])
+            if "LSTM" in model_type and _lstm_model is not None and _lstm_scaler is not None:
+                feat_scaled = _lstm_scaler.transform(features)
+                feat_3d = np.reshape(feat_scaled, (1, 1, 10))
+                speed = float(_lstm_model.predict(feat_3d, verbose=0)[0][0])
+            elif "GRU" in model_type and _gru_model is not None and _gru_scaler is not None:
+                feat_scaled = _gru_scaler.transform(features)
+                feat_3d = np.reshape(feat_scaled, (1, 1, 10))
+                speed = float(_gru_model.predict(feat_3d, verbose=0)[0][0])
+            else:
+                speed = float(_rf_model.predict(features)[0])
+            results.append(speed)
+        except Exception:
+            results.append(30.0)
+    return results
+
+@st.cache_data(show_spinner=False)
+def cached_predict_all_routes_next_hours(_rf_model, _lstm_model, _gru_model,
+                                          _lstm_scaler, _gru_scaler, _le_route,
+                                          weather_enc, weekend_enc, dayofweek, month,
+                                          model_type, date_str, current_hour,
+                                          route_names_tuple):
+    """Cache dự báo 6h tới cho TẤT CẢ tuyến đường — dùng ThreadPoolExecutor song song."""
+    from concurrent.futures import ThreadPoolExecutor
+
+    date_obj = pd.Timestamp(date_str).date()
+    hours = list(range(current_hour, min(current_hour + 7, 24)))
+
+    def _predict_one(args):
+        route_name, h = args
+        try:
+            r_enc = _le_route.transform([route_name])[0]
+            ti, jc, jl, jd, _ = get_tomtom_features(date_obj, h)
+            features = np.array([[
+                r_enc, weather_enc, weekend_enc, h, dayofweek, month,
+                ti, jc, jl, jd
+            ]])
+            if "LSTM" in model_type and _lstm_model is not None and _lstm_scaler is not None:
+                feat_scaled = _lstm_scaler.transform(features)
+                feat_3d = np.reshape(feat_scaled, (1, 1, 10))
+                return route_name, h, float(_lstm_model.predict(feat_3d, verbose=0)[0][0])
+            elif "GRU" in model_type and _gru_model is not None and _gru_scaler is not None:
+                feat_scaled = _gru_scaler.transform(features)
+                feat_3d = np.reshape(feat_scaled, (1, 1, 10))
+                return route_name, h, float(_gru_model.predict(feat_3d, verbose=0)[0][0])
+            else:
+                return route_name, h, float(_rf_model.predict(features)[0])
+        except Exception:
+            return route_name, h, 30.0
+
+    tasks = [(r, h) for r in route_names_tuple for h in hours]
+    with ThreadPoolExecutor(max_workers=min(8, len(tasks))) as exe:
+        raw_results = list(exe.map(_predict_one, tasks))
+
+    all_predictions = {r: [] for r in route_names_tuple}
+    for route_name, h, speed in raw_results:
+        all_predictions[route_name].append({'hour': h, 'speed': round(speed, 1)})
+    # Sắp xếp lại theo giờ
+    for r in route_names_tuple:
+        all_predictions[r].sort(key=lambda x: x['hour'])
+    return all_predictions
+
+@st.cache_data(show_spinner=False)
+def cached_predict_7am_all_routes(_rf_model, _lstm_model, _gru_model,
+                                   _lstm_scaler, _gru_scaler, _le_route,
+                                   weather_enc, weekend_enc, dayofweek, month,
+                                   model_type, date_str, route_names_tuple):
+    """Cache dự báo 7:00 sáng cho tất cả tuyến."""
+    date_obj = pd.Timestamp(date_str).date()
+    results = {}
+    for route_name in route_names_tuple:
+        try:
+            r_enc = _le_route.transform([route_name])[0]
+            ti, jc, jl, jd, _ = get_tomtom_features(date_obj, 7)
+            features = np.array([[
+                r_enc, weather_enc, weekend_enc, 7, dayofweek, month,
+                ti, jc, jl, jd
+            ]])
+            if "LSTM" in model_type and _lstm_model is not None and _lstm_scaler is not None:
+                feat_scaled = _lstm_scaler.transform(features)
+                feat_3d = np.reshape(feat_scaled, (1, 1, 10))
+                speed = float(_lstm_model.predict(feat_3d, verbose=0)[0][0])
+            elif "GRU" in model_type and _gru_model is not None and _gru_scaler is not None:
+                feat_scaled = _gru_scaler.transform(features)
+                feat_3d = np.reshape(feat_scaled, (1, 1, 10))
+                speed = float(_gru_model.predict(feat_3d, verbose=0)[0][0])
+            else:
+                speed = float(_rf_model.predict(features)[0])
+            results[route_name] = speed
+        except Exception:
+            results[route_name] = 30.0
+    return results
+
 # --- API HELPER FUNCTIONS ---
+@st.cache_data(ttl=60)
 def fetch_tomtom_flow(lat, lon):
     try:
         url = "https://api.tomtom.com/traffic/services/4/flowSegmentData/absolute/10/json"
@@ -266,6 +395,7 @@ def fetch_tomtom_flow(lat, lon):
     except:
         return None
 
+@st.cache_data(ttl=300)
 def fetch_weather():
     try:
         url = "https://api.openweathermap.org/data/2.5/weather"
@@ -286,6 +416,44 @@ def fetch_weather():
     except:
         return None
 
+# === PRE-COMPUTE PREDICTIONS (1 LẦN, CACHE LẠI) ===
+from datetime import datetime as _dt
+_current_hour = _dt.now().hour
+_date_str = str(selected_date)          # dùng str làm cache key
+_route_names_tuple = tuple(HANOI_ROUTES.keys())
+
+# Dự báo 24h của tuyến đường được chọn (Tab 1)
+with st.spinner("🤖 Đang tính toán dự báo 24h..."):
+    predictions_24h = cached_predict_24h(
+        rf_model, lstm_model if is_using_lstm else None,
+        gru_model if is_using_gru else None,
+        lstm_scaler, gru_scaler,
+        route_encoded, weather_encoded, weekend_encoded,
+        pred_dayofweek, pred_month,
+        selected_model_type, _date_str
+    )
+
+# Dự báo 7h sáng tất cả tuyến (Tab 1 - báo cáo nhanh)
+predictions_7am = cached_predict_7am_all_routes(
+    rf_model, lstm_model if is_using_lstm else None,
+    gru_model if is_using_gru else None,
+    lstm_scaler, gru_scaler, le_route,
+    weather_encoded, weekend_encoded,
+    pred_dayofweek, pred_month,
+    selected_model_type, _date_str, _route_names_tuple
+)
+
+# Dự báo 6h tới cho 3 tuyến song song (Tab 3 - bản đồ)
+with st.spinner("🗺️ Đang tính toán dự báo bản đồ..."):
+    all_route_predictions = cached_predict_all_routes_next_hours(
+        rf_model, lstm_model if is_using_lstm else None,
+        gru_model if is_using_gru else None,
+        lstm_scaler, gru_scaler, le_route,
+        weather_encoded, weekend_encoded,
+        pred_dayofweek, pred_month,
+        selected_model_type, _date_str, _current_hour, _route_names_tuple
+    )
+
 # === TABS ROUTING ===
 tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Dự Báo AI", "🔴 Real-time", "🗺️ Bản Đồ Traffic", "📈 Lịch Sử", "🎯 Đánh Giá Mô Hình"])
 
@@ -301,14 +469,18 @@ with tab1:
         selected_date, selected_model_type, selected_route, selected_hour, selected_weather,
         is_weekend, weekend_encoded, pred_dayofweek, pred_month, route_encoded, weather_encoded,
         rf_model, lstm_scaler, gru_scaler, le_route, le_weather, is_using_lstm, is_using_gru,
-        load_keras_model, predict_speed, get_tomtom_features, has_realtime
+        load_keras_model, predict_speed, get_tomtom_features, has_realtime,
+        predictions_24h=predictions_24h,
+        predictions_7am=predictions_7am
     )
 
 with tab2:
     render_tab2(TOMTOM_API_KEY, HANOI_ROUTES, fetch_tomtom_flow, fetch_weather)
 
 with tab3:
-    render_tab3(TOMTOM_API_KEY, HANOI_ROUTES, fetch_tomtom_flow)
+    render_tab3(TOMTOM_API_KEY, HANOI_ROUTES, fetch_tomtom_flow,
+                predict_speed_for_route, selected_date, selected_model_type,
+                all_predictions=all_route_predictions)
 
 with tab4:
     render_tab4(load_realtime_data)

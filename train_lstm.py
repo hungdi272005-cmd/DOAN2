@@ -18,6 +18,7 @@ from sklearn.preprocessing import StandardScaler
 import joblib
 import argparse
 import os
+import json
 
 def load_data(data_source='realtime'):
     """Load dữ liệu theo nguồn và gộp dữ liệu TomTom Traffic Index."""
@@ -87,13 +88,20 @@ def train_lstm_model(df):
     reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=5, min_lr=1e-6)
 
     print("Training LSTM... (50 epochs, auto-stop khi hoi tu)")
-    lstm_model.fit(
+    history = lstm_model.fit(
         X_train, y_train,
         epochs=50,
         batch_size=64,
         validation_data=(X_test, y_test),
         callbacks=[early_stop, reduce_lr]
     )
+
+    # Lưu lịch sử huấn luyện để vẽ biểu đồ đường cong học tập
+    history_dict = {k: [float(v) for v in vals] for k, vals in history.history.items()}
+    history_dict['epochs'] = list(range(1, len(history_dict['loss']) + 1))
+    with open('lstm_training_history.json', 'w', encoding='utf-8') as f:
+        json.dump(history_dict, f, ensure_ascii=False, indent=2)
+    print(f"   Đã lưu lịch sử huấn luyện ({len(history_dict['epochs'])} epochs) vào lstm_training_history.json")
 
     print("Evaluating...")
     loss, mae = lstm_model.evaluate(X_test, y_test)

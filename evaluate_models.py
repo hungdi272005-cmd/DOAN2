@@ -34,11 +34,11 @@ from sklearn.metrics import (
 # Tốc độ chuẩn (free-flow) cho từng tuyến
 # ========================================
 ROUTE_BASE_SPEED = {
-    'Nguyen Trai': 40,
-    'Vanh Dai 3': 60,
-    'Ton Duc Thang': 35,
+    'Nguyen Trai': 31,
+    'Vanh Dai 3': 41,
+    'Ton Duc Thang': 28,
 }
-DEFAULT_BASE_SPEED = 40
+DEFAULT_BASE_SPEED = 30
 
 # Nhãn phân lớp
 CONGESTION_LABELS = {
