@@ -211,8 +211,13 @@ routes = le_route.classes_.tolist()
 selected_route = st.sidebar.selectbox("Chọn Tuyến Đường", routes)
 
 # Date/Time
-st.sidebar.subheader("Thời Gian")
-selected_date = st.sidebar.date_input("Chọn Ngày Dự Báo", datetime.today())
+# Get current time in Vietnam (UTC+7)
+import pytz
+vn_tz = pytz.timezone('Asia/Ho_Chi_Minh')
+vn_now = datetime.now(vn_tz)
+
+st.sidebar.markdown("### Thời Gian")
+selected_date = st.sidebar.date_input("Chọn Ngày Dự Báo", vn_now.date())
 selected_hour = st.sidebar.slider("Chọn Giờ (0-23h)", 0, 23, 8) 
 
 # Weather
@@ -457,8 +462,8 @@ def fetch_weather():
         return None
 
 # === PRE-COMPUTE PREDICTIONS (1 LẦN, CACHE LẠI) ===
-from datetime import datetime as _dt
-_current_hour = _dt.now().hour
+vn_now = datetime.now(pytz.timezone('Asia/Ho_Chi_Minh'))
+_current_hour = vn_now.hour
 _date_str = str(selected_date)          # dùng str làm cache key
 _route_names_tuple = tuple(HANOI_ROUTES.keys())
 
