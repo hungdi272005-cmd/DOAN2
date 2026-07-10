@@ -282,34 +282,42 @@ def cached_predict_24h(route_enc, weather_enc, weekend_enc, dayofweek, month,
     _gru_m   = load_keras_model('gru')  if 'GRU'  in model_type else None
 
     date_obj = pd.Timestamp(date_str).date()
-    results = []
+    
+    # 1. Build features batch
+    features_list = []
     for h in range(24):
         try:
             ti, jc, jl, jd, _ = get_tomtom_features(date_obj, h)
-            features = np.array([[
-                route_enc, weather_enc, weekend_enc, h, dayofweek, month,
-                ti, jc, jl, jd
-            ]])
-            if 'LSTM' in model_type and _lstm_m is not None and _lstm_sc is not None:
-                feat_scaled = _lstm_sc.transform(features)
-                feat_3d = np.reshape(feat_scaled, (1, 1, 10))
-                speed = float(_lstm_m.predict(feat_3d, verbose=0)[0][0])
-            elif 'GRU' in model_type and _gru_m is not None and _gru_sc is not None:
-                feat_scaled = _gru_sc.transform(features)
-                feat_3d = np.reshape(feat_scaled, (1, 1, 10))
-                speed = float(_gru_m.predict(feat_3d, verbose=0)[0][0])
-            else:
-                speed = float(_rf.predict(features)[0])
-            results.append(speed)
+            features_list.append([route_enc, weather_enc, weekend_enc, h, dayofweek, month, ti, jc, jl, jd])
         except Exception:
-            results.append(30.0)
-    return results
+            # Fallback values if API fails
+            features_list.append([route_enc, weather_enc, weekend_enc, h, dayofweek, month, 0, 0, 0, 0])
+            
+    features = np.array(features_list)
+    
+    # 2. Predict batch
+    try:
+        if 'LSTM' in model_type and _lstm_m is not None and _lstm_sc is not None:
+            feat_scaled = _lstm_sc.transform(features)
+            feat_3d = np.reshape(feat_scaled, (24, 1, 10))
+            speeds = _lstm_m.predict(feat_3d, verbose=0).flatten()
+        elif 'GRU' in model_type and _gru_m is not None and _gru_sc is not None:
+            feat_scaled = _gru_sc.transform(features)
+            feat_3d = np.reshape(feat_scaled, (24, 1, 10))
+            speeds = _gru_m.predict(feat_3d, verbose=0).flatten()
+        else:
+            speeds = _rf.predict(features)
+        
+        return [float(s) for s in speeds]
+    except Exception:
+        return [30.0] * 24
+
 
 @st.cache_data(show_spinner=False)
 def cached_predict_all_routes_next_hours(weather_enc, weekend_enc, dayofweek, month,
                                           model_type, date_str, current_hour,
                                           route_names_tuple):
-    """Cache dự báo 6h tới cho TẤT CẢ tuyến đường (tuần tự, an toàn)."""
+    """Cache dự báo 6h tới cho TẤT CẢ tuyến đường (batch)."""
     _rf, _le_r, _le_w = load_base_models()
     _lstm_sc = load_lstm_scaler()
     _gru_sc  = load_gru_scaler()
@@ -319,35 +327,50 @@ def cached_predict_all_routes_next_hours(weather_enc, weekend_enc, dayofweek, mo
     date_obj = pd.Timestamp(date_str).date()
     hours = list(range(current_hour, min(current_hour + 7, 24)))
 
-    all_predictions = {r: [] for r in route_names_tuple}
+    # 1. Build features batch
+    features_list = []
+    meta_info = [] # store (route_name, hour) to map back results
     for route_name in route_names_tuple:
         r_enc = _le_r.transform([route_name])[0]
         for h in hours:
             try:
                 ti, jc, jl, jd, _ = get_tomtom_features(date_obj, h)
-                features = np.array([[
-                    r_enc, weather_enc, weekend_enc, h, dayofweek, month,
-                    ti, jc, jl, jd
-                ]])
-                if 'LSTM' in model_type and _lstm_m is not None and _lstm_sc is not None:
-                    feat_scaled = _lstm_sc.transform(features)
-                    feat_3d = np.reshape(feat_scaled, (1, 1, 10))
-                    speed = float(_lstm_m.predict(feat_3d, verbose=0)[0][0])
-                elif 'GRU' in model_type and _gru_m is not None and _gru_sc is not None:
-                    feat_scaled = _gru_sc.transform(features)
-                    feat_3d = np.reshape(feat_scaled, (1, 1, 10))
-                    speed = float(_gru_m.predict(feat_3d, verbose=0)[0][0])
-                else:
-                    speed = float(_rf.predict(features)[0])
-                all_predictions[route_name].append({'hour': h, 'speed': round(speed, 1)})
+                features_list.append([r_enc, weather_enc, weekend_enc, h, dayofweek, month, ti, jc, jl, jd])
             except Exception:
-                all_predictions[route_name].append({'hour': h, 'speed': 30.0})
+                features_list.append([r_enc, weather_enc, weekend_enc, h, dayofweek, month, 0, 0, 0, 0])
+            meta_info.append((route_name, h))
+            
+    if not features_list:
+        return {r: [] for r in route_names_tuple}
+
+    features = np.array(features_list)
+    
+    # 2. Predict batch
+    try:
+        if 'LSTM' in model_type and _lstm_m is not None and _lstm_sc is not None:
+            feat_scaled = _lstm_sc.transform(features)
+            feat_3d = np.reshape(feat_scaled, (len(features), 1, 10))
+            speeds = _lstm_m.predict(feat_3d, verbose=0).flatten()
+        elif 'GRU' in model_type and _gru_m is not None and _gru_sc is not None:
+            feat_scaled = _gru_sc.transform(features)
+            feat_3d = np.reshape(feat_scaled, (len(features), 1, 10))
+            speeds = _gru_m.predict(feat_3d, verbose=0).flatten()
+        else:
+            speeds = _rf.predict(features)
+    except Exception:
+        speeds = [30.0] * len(features)
+
+    # 3. Map back to dictionary
+    all_predictions = {r: [] for r in route_names_tuple}
+    for (route_name, h), speed in zip(meta_info, speeds):
+        all_predictions[route_name].append({'hour': h, 'speed': round(float(speed), 1)})
+        
     return all_predictions
 
 @st.cache_data(show_spinner=False)
 def cached_predict_7am_all_routes(weather_enc, weekend_enc, dayofweek, month,
                                    model_type, date_str, route_names_tuple):
-    """Cache dự báo 7:00 sáng cho tất cả tuyến."""
+    """Cache dự báo 7:00 sáng cho tất cả tuyến (batch)."""
     _rf, _le_r, _le_w = load_base_models()
     _lstm_sc = load_lstm_scaler()
     _gru_sc  = load_gru_scaler()
@@ -355,28 +378,41 @@ def cached_predict_7am_all_routes(weather_enc, weekend_enc, dayofweek, month,
     _gru_m   = load_keras_model('gru')  if 'GRU'  in model_type else None
 
     date_obj = pd.Timestamp(date_str).date()
-    results = {}
+    
+    features_list = []
+    meta_info = []
     for route_name in route_names_tuple:
+        r_enc = _le_r.transform([route_name])[0]
         try:
-            r_enc = _le_r.transform([route_name])[0]
             ti, jc, jl, jd, _ = get_tomtom_features(date_obj, 7)
-            features = np.array([[
-                r_enc, weather_enc, weekend_enc, 7, dayofweek, month,
-                ti, jc, jl, jd
-            ]])
-            if 'LSTM' in model_type and _lstm_m is not None and _lstm_sc is not None:
-                feat_scaled = _lstm_sc.transform(features)
-                feat_3d = np.reshape(feat_scaled, (1, 1, 10))
-                speed = float(_lstm_m.predict(feat_3d, verbose=0)[0][0])
-            elif 'GRU' in model_type and _gru_m is not None and _gru_sc is not None:
-                feat_scaled = _gru_sc.transform(features)
-                feat_3d = np.reshape(feat_scaled, (1, 1, 10))
-                speed = float(_gru_m.predict(feat_3d, verbose=0)[0][0])
-            else:
-                speed = float(_rf.predict(features)[0])
-            results[route_name] = speed
+            features_list.append([r_enc, weather_enc, weekend_enc, 7, dayofweek, month, ti, jc, jl, jd])
         except Exception:
-            results[route_name] = 30.0
+            features_list.append([r_enc, weather_enc, weekend_enc, 7, dayofweek, month, 0, 0, 0, 0])
+        meta_info.append(route_name)
+            
+    if not features_list:
+        return {}
+
+    features = np.array(features_list)
+    
+    try:
+        if 'LSTM' in model_type and _lstm_m is not None and _lstm_sc is not None:
+            feat_scaled = _lstm_sc.transform(features)
+            feat_3d = np.reshape(feat_scaled, (len(features), 1, 10))
+            speeds = _lstm_m.predict(feat_3d, verbose=0).flatten()
+        elif 'GRU' in model_type and _gru_m is not None and _gru_sc is not None:
+            feat_scaled = _gru_sc.transform(features)
+            feat_3d = np.reshape(feat_scaled, (len(features), 1, 10))
+            speeds = _gru_m.predict(feat_3d, verbose=0).flatten()
+        else:
+            speeds = _rf.predict(features)
+    except Exception:
+        speeds = [30.0] * len(features)
+
+    results = {}
+    for route_name, speed in zip(meta_info, speeds):
+        results[route_name] = float(speed)
+        
     return results
 
 # --- API HELPER FUNCTIONS ---
